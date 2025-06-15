@@ -3,6 +3,8 @@ import logging
 import shap
 from matplotlib import pyplot as plt
 import numpy as np
+from contextlib import redirect_stdout, redirect_stderr
+import os
 
 logger = logging.getLogger('xai-privacy')
 
@@ -26,9 +28,11 @@ class ShapMembershipInference(MembershipInference):
 
         shap_model = ShapModel(model)
 
-        explainer = shap.explainers.Exact(shap_model, x_train)
-
-        shap_values = explainer(x_train)
+        # Redirect both stdout and stderr to suppress SHAP's debug messages and progress bar
+        with open(os.devnull, 'w') as fnull:
+            with redirect_stdout(fnull), redirect_stderr(fnull):
+                explainer = shap.explainers.Exact(shap_model, x_train)
+                shap_values = explainer(x_train)
 
         d_plots_for_features = []
 
@@ -36,9 +40,10 @@ class ShapMembershipInference(MembershipInference):
             logger.debug(f'Calculating dependence plot for feature {i} of {num_of_features}')
             fig, ax = plt.subplots()
 
-            # calculate SHAP dependence plot for the i-th feature using the shap values for the heart disease likelihood output
-            # do not show the plot, do not include interactions
-            shap.dependence_plot(i, shap_values.values, x_train, show=False, interaction_index=None, ax=ax)
+            # Redirect both stdout and stderr
+            with open(os.devnull, 'w') as fnull:
+                with redirect_stdout(fnull), redirect_stderr(fnull):
+                    shap.dependence_plot(i, shap_values.values, x_train, show=False, interaction_index=None, ax=ax)
 
             # x, y data of plot
             path_collection_offsets = ax.collections[0].get_offsets()
@@ -65,7 +70,10 @@ class ShapMembershipInference(MembershipInference):
 
             logger.debug(f'Checking sample {index}: {sample.to_numpy()[0]}')
 
-            shap_values = shap_value_explainer(sample)
+            # Redirect both stdout and stderr
+            with open(os.devnull, 'w') as fnull:
+                with redirect_stdout(fnull), redirect_stderr(fnull):
+                    shap_values = shap_value_explainer(sample)
 
             is_member = True
 
